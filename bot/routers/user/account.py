@@ -1,14 +1,23 @@
+import logging
 from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    FSInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.keyboards.user_kb import ACCOUNT_BUTTON, WITHDRAW_BUTTON
 from db.models.user import User
 from utils.formatting import format_money
+
+logger = logging.getLogger("openbudget")
 
 router = Router(name="user_account")
 
@@ -47,27 +56,37 @@ def _account_text(db_user: User) -> str:
     )
 
 
+async def _send_account_card(answer_photo, answer_text, db_user: User) -> None:
+    """Try to send the account card with the logo photo; fall back to plain text
+    if the photo can't be sent (missing file, permission issue, etc.) so the
+    "Hisobim" section never fully breaks — and log the real reason either way."""
+    try:
+        await answer_photo(
+            FSInputFile(ACCOUNT_PHOTO_PATH),
+            caption=_account_text(db_user),
+            reply_markup=_account_kb(),
+        )
+    except Exception:
+        logger.exception(
+            "Akkaunt logotipini yuborib bo'lmadi (yo'l: %s). Matnli ko'rinishga o'tildi.",
+            ACCOUNT_PHOTO_PATH,
+        )
+        await answer_text(_account_text(db_user), reply_markup=_account_kb())
+
+
 @router.message(F.text == ACCOUNT_BUTTON)
 async def show_account(message: Message, session: AsyncSession, db_user: User, state: FSMContext) -> None:
     await state.clear()
-    await message.answer_photo(
-        FSInputFile(ACCOUNT_PHOTO_PATH),
-        caption=_account_text(db_user),
-        reply_markup=_account_kb(),
-    )
+    await _send_account_card(message.answer_photo, message.answer, db_user)
 
 
 @router.callback_query(F.data == ACCOUNT_BACK_CB)
 async def back_to_account(callback: CallbackQuery, db_user: User) -> None:
     # Manba xabar (masalan "to'lovlar tarixi") oddiy matn bo'lgani uchun uni to'g'ridan-to'g'ri
     # rasmli xabarga aylantirib bo'lmaydi — shuning uchun eskisini o'chirib, o'rniga yangi
-    # rasmli akkaunt kartasini yuboramiz.
+    # akkaunt kartasini yuboramiz.
     try:
         await callback.message.delete()
     except TelegramBadRequest:
         pass
-    await callback.message.answer_photo(
-        FSInputFile(ACCOUNT_PHOTO_PATH),
-        caption=_account_text(db_user),
-        reply_markup=_account_kb(),
-    )
+    await _send_account_card(callback.message.answer_photo, callback.message.answer, db_user)
