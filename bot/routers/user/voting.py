@@ -137,7 +137,8 @@ async def vote_done(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(screenshot_ids=[], screenshot_message_ids=[])
     await state.set_state(VotingStates.waiting_screenshot)
     await callback.message.answer(
-        "📸 Endi ovoz berganingizni tasdiqlovchi skrinshotlarni yuboring."
+        "📮 Ovoz berganingiz uchun rahmat!\n\n"
+        "📱 Endi ovoz berganingizni tasdiqlovchi skrinshotni yuboring."
     )
 
 
@@ -287,8 +288,8 @@ async def _finalize_submission(
     await state.clear()
     await bot.send_message(
         db_user.telegram_id,
-        "✅ Arizangiz qabul qilindi va ko'rib chiqilmoqda.\n"
-        "Tasdiqlansa, hisobingizga mukofot tushadi.",
+        "✅ Ovoz so'rovingiz qabul qilindi va tekshiruvga yuborildi!\n\n"
+        "⏳ So'rovingiz admin tomonidan ko'rib chiqiladi. Natija haqida xabar olasiz.",
         reply_markup=main_menu(),
     )
 
