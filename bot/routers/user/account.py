@@ -14,11 +14,18 @@ MY_WITHDRAWALS_OPEN_CB = "mywithdrawals:open"
 ACCOUNT_BACK_CB = "account:back"
 
 
+# TODO: replace with the real promo link before deploying
+PROMO_BOT_URL = "https://t.me/your_channel_here"
+
+
 def _account_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=WITHDRAW_BUTTON, callback_data=WITHDRAW_START_CB)],
-            [InlineKeyboardButton(text="📋 To'lovlar tarixi", callback_data=MY_WITHDRAWALS_OPEN_CB)],
+            [
+                InlineKeyboardButton(text=WITHDRAW_BUTTON, callback_data=WITHDRAW_START_CB),
+                InlineKeyboardButton(text="📋 Sizning tarix", callback_data=MY_WITHDRAWALS_OPEN_CB),
+            ],
+            [InlineKeyboardButton(text="🚀 Shunday bot hohlaysizmi?", url=PROMO_BOT_URL)],
         ]
     )
 
@@ -26,9 +33,12 @@ def _account_kb() -> InlineKeyboardMarkup:
 def _account_text(db_user: User) -> str:
     return (
         "💻 Profilingiz haqida ma'lumot:\n\n"
-        f"💰 Balansingiz: {format_money(db_user.balance)}\n"
+        f"📝 Ismingiz: {db_user.full_name or '—'}\n"
+        f"🆔 ID raqamingiz: {db_user.telegram_id}\n"
+        "―" * 20 + "\n\n"
+        f"💰 Sizning balansingiz: {format_money(db_user.balance)}\n"
         f"💸 Yechilgan summa: {format_money(db_user.total_withdrawn)}\n"
-        f"🗳 Tasdiqlangan ovozlar: {db_user.votes_confirmed_count} ta"
+        f"🗳 Siz bergan ovozlar: {db_user.votes_confirmed_count} ta"
     )
 
 
