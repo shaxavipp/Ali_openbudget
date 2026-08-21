@@ -1,23 +1,12 @@
-import logging
-from pathlib import Path
-
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    CallbackQuery,
-    FSInputFile,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.keyboards.user_kb import ACCOUNT_BUTTON, WITHDRAW_BUTTON
 from db.models.user import User
 from utils.formatting import format_money
-
-logger = logging.getLogger("openbudget")
 
 router = Router(name="user_account")
 
@@ -27,15 +16,6 @@ ACCOUNT_BACK_CB = "account:back"
 
 # "Shunday bot hohlaysizmi?" tugmasi bosilganda ochiladigan akkaunt.
 PROMO_BOT_URL = "https://t.me/shaxavip"
-
-# Profil kartochkasi tepasidagi logotip — account.py bilan bir papkada (bot/routers/user/).
-ACCOUNT_PHOTO_PATH = Path(__file__).parent / "openbudget_logo.jpg"
-
-# Birinchi muvaffaqiyatli yuborishdan keyin Telegram bergan file_id shu yerda keshlanadi —
-# shundan keyin rasm diskdan qayta yuklanmaydi, balki file_id orqali darhol yuboriladi.
-# Buning aksi (har safar faylni qayta yuklash) sekinlik va "Hisobim" bir necha marta
-# bosilganda bir nechta xabar dublikat bo'lib ketishiga olib kelishi mumkin edi.
-_cached_photo_id: str | None = None
 
 
 def _account_kb() -> InlineKeyboardMarkup:
@@ -62,40 +42,21 @@ def _account_text(db_user: User) -> str:
     )
 
 
-async def _send_account_card(answer_photo, answer_text, db_user: User) -> None:
-    """Try to send the account card with the logo photo; fall back to plain text
-    if the photo can't be sent (missing file, permission issue, etc.) so the
-    "Hisobim" section never fully breaks — and log the real reason either way."""
-    global _cached_photo_id
-    try:
-        sent = await answer_photo(
-            _cached_photo_id or FSInputFile(ACCOUNT_PHOTO_PATH),
-            caption=_account_text(db_user),
-            reply_markup=_account_kb(),
-        )
-        if _cached_photo_id is None and sent.photo:
-            _cached_photo_id = sent.photo[-1].file_id
-    except Exception:
-        logger.exception(
-            "Akkaunt logotipini yuborib bo'lmadi (yo'l: %s). Matnli ko'rinishga o'tildi.",
-            ACCOUNT_PHOTO_PATH,
-        )
-        await answer_text(_account_text(db_user), reply_markup=_account_kb())
-
-
 @router.message(F.text == ACCOUNT_BUTTON)
 async def show_account(message: Message, session: AsyncSession, db_user: User, state: FSMContext) -> None:
     await state.clear()
-    await _send_account_card(message.answer_photo, message.answer, db_user)
+    await message.answer(_account_text(db_user), reply_markup=_account_kb())
 
 
 @router.callback_query(F.data == ACCOUNT_BACK_CB)
 async def back_to_account(callback: CallbackQuery, db_user: User) -> None:
-    # Manba xabar (masalan "to'lovlar tarixi") oddiy matn bo'lgani uchun uni to'g'ridan-to'g'ri
-    # rasmli xabarga aylantirib bo'lmaydi — shuning uchun eskisini o'chirib, o'rniga yangi
-    # akkaunt kartasini yuboramiz.
     try:
-        await callback.message.delete()
+        await callback.message.edit_text(_account_text(db_user), reply_markup=_account_kb())
     except TelegramBadRequest:
-        pass
-    await _send_account_card(callback.message.answer_photo, callback.message.answer, db_user)
+        # Manba xabar tahrirlab bo'lmaydigan turdagi bo'lsa (masalan boshqa xabar turi),
+        # eskisini o'chirib, o'rniga yangi akkaunt kartasini yuboramiz.
+        try:
+            await callback.message.delete()
+        except TelegramBadRequest:
+            pass
+        await callback.message.answer(_account_text(db_user), reply_markup=_account_kb())
