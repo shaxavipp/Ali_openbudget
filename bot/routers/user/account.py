@@ -14,8 +14,8 @@ MY_WITHDRAWALS_OPEN_CB = "mywithdrawals:open"
 ACCOUNT_BACK_CB = "account:back"
 
 
-# TODO: replace with the real promo link before deploying
-PROMO_BOT_URL = "https://t.me/your_channel_here"
+# "Shunday bot hohlaysizmi?" tugmasi bosilganda ochiladigan akkaunt
+PROMO_BOT_URL = "https://t.me/shaxavip"
 
 
 def _account_kb() -> InlineKeyboardMarkup:
