@@ -31,6 +31,12 @@ PROMO_BOT_URL = "https://t.me/shaxavip"
 # Profil kartochkasi tepasidagi logotip — account.py bilan bir papkada (bot/routers/user/).
 ACCOUNT_PHOTO_PATH = Path(__file__).parent / "openbudget_logo.jpg"
 
+# Birinchi muvaffaqiyatli yuborishdan keyin Telegram bergan file_id shu yerda keshlanadi —
+# shundan keyin rasm diskdan qayta yuklanmaydi, balki file_id orqali darhol yuboriladi.
+# Buning aksi (har safar faylni qayta yuklash) sekinlik va "Hisobim" bir necha marta
+# bosilganda bir nechta xabar dublikat bo'lib ketishiga olib kelishi mumkin edi.
+_cached_photo_id: str | None = None
+
 
 def _account_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -60,12 +66,15 @@ async def _send_account_card(answer_photo, answer_text, db_user: User) -> None:
     """Try to send the account card with the logo photo; fall back to plain text
     if the photo can't be sent (missing file, permission issue, etc.) so the
     "Hisobim" section never fully breaks — and log the real reason either way."""
+    global _cached_photo_id
     try:
-        await answer_photo(
-            FSInputFile(ACCOUNT_PHOTO_PATH),
+        sent = await answer_photo(
+            _cached_photo_id or FSInputFile(ACCOUNT_PHOTO_PATH),
             caption=_account_text(db_user),
             reply_markup=_account_kb(),
         )
+        if _cached_photo_id is None and sent.photo:
+            _cached_photo_id = sent.photo[-1].file_id
     except Exception:
         logger.exception(
             "Akkaunt logotipini yuborib bo'lmadi (yo'l: %s). Matnli ko'rinishga o'tildi.",
