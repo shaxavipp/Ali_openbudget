@@ -19,8 +19,8 @@ ACCOUNT_BACK_CB = "account:back"
 # "Shunday bot hohlaysizmi?" tugmasi bosilganda ochiladigan akkaunt.
 PROMO_BOT_URL = "https://t.me/shaxavip"
 
-# Profil kartochkasi tepasidagi logotip. Loyihangizda fayl boshqa joyda bo'lsa shu yo'lni tuzating.
-ACCOUNT_PHOTO_PATH = Path("assets/openbudget_logo.jpg")
+# Profil kartochkasi tepasidagi logotip — account.py bilan bir papkada (bot/routers/user/).
+ACCOUNT_PHOTO_PATH = Path(__file__).parent / "openbudget_logo.jpg"
 
 
 def _account_kb() -> InlineKeyboardMarkup:
