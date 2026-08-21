@@ -51,8 +51,9 @@ async def _handle_approve(
     await _notify_user(
         bot,
         result.user,
-        f"✅ Ovozingiz tasdiqlandi! ({result.vote.phone_number})\n"
-        f"Hisobingizga {format_money(result.reward_amount)} tushdi.",
+        f"✅ Sizning {result.vote.phone_number} raqamingiz tasdiqlandi va "
+        f"hisobingizga {format_money(result.reward_amount)} qo'shildi!\n"
+        "👉 Pullaringizni yechib olish uchun «💰 Hisobim» bo'limiga kiring",
     )
 
     if result.referral_credit is not None:
@@ -78,8 +79,7 @@ async def _handle_reject(
         await _notify_user(
             bot,
             user,
-            f"❌ Ovozingiz rad etildi. ({vote.phone_number})\n"
-            "Skrinshot noto'g'ri yoki tushunarsiz bo'lishi mumkin.",
+            f"❌ Sizning so'rovingiz ({vote.phone_number}) bekor qilindi!",
         )
 
 
