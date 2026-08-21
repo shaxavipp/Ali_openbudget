@@ -34,6 +34,11 @@ CONFIRM_CB = "wd_confirm"
 CANCEL_CB = "wd_cancel"
 
 
+def _format_card(digits: str) -> str:
+    """Group raw digits into 4-4-4-4 for display, e.g. '8600 0607 7072 5902'."""
+    return " ".join(digits[i : i + 4] for i in range(0, len(digits), 4))
+
+
 def _payment_system_kb() -> InlineKeyboardMarkup:
     rows = []
     row = []
@@ -186,12 +191,13 @@ async def withdraw_confirm(
 async def _post_to_payments_channel(
     session: AsyncSession, bot: Bot, db_user: User, withdrawal: Withdrawal
 ) -> None:
+    system_icon, _, system_name = PAYMENT_SYSTEM_LABELS[withdrawal.payment_system].partition(" ")
     text = (
-        "🧾 Yangi pul yechish so'rovi!\n\n"
+        "📝 Yangi pul yechish so'rovi!\n\n"
         f"👤 Foydalanuvchi: {db_user.full_name or '—'} "
         f"(@{db_user.username or '—'}, ID: {db_user.telegram_id})\n"
-        f"💳 To'lov tizimi: {PAYMENT_SYSTEM_LABELS[withdrawal.payment_system]}\n"
-        f"🔢 Karta: {mask_card(withdrawal.card_number)}\n"
+        f"{system_icon} To'lov tizimi: {system_name}\n"
+        f"💳 Karta: {_format_card(withdrawal.card_number)}\n"
         f"💰 Miqdor: {format_money(withdrawal.amount)}\n"
         f"🕒 Vaqt: {format_local(withdrawal.created_at)}"
     )
