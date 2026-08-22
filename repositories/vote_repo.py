@@ -1,8 +1,9 @@
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.models.user import User
 from db.models.vote import Vote, VoteStatus
 
 
@@ -68,6 +69,33 @@ async def list_paginated(session: AsyncSession, offset: int, limit: int) -> list
 async def count_all(session: AsyncSession) -> int:
     result = await session.execute(select(func.count()).select_from(Vote))
     return result.scalar() or 0
+
+
+async def count_by_status(session: AsyncSession, status: VoteStatus) -> int:
+    stmt = select(func.count()).select_from(Vote).where(Vote.status == status)
+    result = await session.execute(stmt)
+    return result.scalar() or 0
+
+
+async def top_voters(session: AsyncSession, limit: int = 10) -> list[tuple[str, int]]:
+    """Top users by confirmed vote count, as (display_name, vote_count) pairs.
+
+    display_name prefers the Telegram username, then full name, then falls
+    back to the numeric telegram_id so nobody renders as a blank line.
+    """
+    name_col = func.coalesce(User.username, User.full_name, cast(User.telegram_id, String)).label(
+        "name"
+    )
+    stmt = (
+        select(name_col, func.count(Vote.id).label("cnt"))
+        .join(User, User.telegram_id == Vote.user_id)
+        .where(Vote.status == VoteStatus.CONFIRMED)
+        .group_by(User.telegram_id, User.username, User.full_name)
+        .order_by(func.count(Vote.id).desc())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return [(row.name, row.cnt) for row in result.all()]
 
 
 async def list_by_user_paginated(
