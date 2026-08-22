@@ -1,3 +1,4 @@
+
 import asyncio
 
 from aiogram import F, Router
@@ -89,10 +90,19 @@ async def _show_or_refresh_account(bot, chat_id: int, db_user: User) -> None:
                     text, chat_id=existing_chat_id, message_id=existing_message_id, reply_markup=kb
                 )
                 return
-            except TelegramBadRequest:
-                # Eski xabar tahrirlab bo'lmaydi (o'chirilgan, matn bir xil, yoki
-                # boshqa sabab) — yangisini yuborishga o'tamiz.
-                pass
+            except TelegramBadRequest as e:
+                # Telegram, agar matn va tugmalar OLDINGISI BILAN AYNAN BIR XIL bo'lsa,
+                # "message is not modified" xatosini qaytaradi (masalan foydalanuvchi
+                # balansi o'zgarmagan holda tugmani qayta bossa). Bu haqiqiy xato emas —
+                # xabar allaqachon to'g'ri holatda, shuning uchun hech narsa qilmasdan
+                # chiqamiz. Agar shu holatni oddiy xatolik sifatida ushlab, pastdagi
+                # "yangi xabar yuborish" yo'liga tushib qolsak, har bir qayta bosishda
+                # (matn o'zgarmagan bo'lsa ham) yangi-yangi xabar yuborilib, xuddi eski
+                # muammo qaytadan paydo bo'ladi.
+                if "message is not modified" in str(e).lower():
+                    return
+                # Boshqa sabab bilan tahrirlab bo'lmadi (masalan xabar o'chirilgan) —
+                # yangisini yuborishga o'tamiz.
 
         sent = await bot.send_message(chat_id, text, reply_markup=kb)
         _last_message[db_user.telegram_id] = (sent.chat.id, sent.message_id)
