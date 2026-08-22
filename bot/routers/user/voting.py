@@ -306,9 +306,9 @@ async def _finalize_submission(
     verifiers_channel_id = getattr(settings, "verifiers_channel_id", None)
     if verifiers_channel_id:
         try:
-            user_vote_number = await vote_repo.count_by_user(session, db_user.telegram_id, None)
+            overall_vote_number = await vote_repo.count_all(session)
             verifier_caption = (
-                f"{user_vote_number}-ovoz #{_build_hashtag(db_user)}\n"
+                f"{overall_vote_number}-ovoz #{_build_hashtag(db_user)}\n"
                 f"📞 {phone_number}\n"
                 f"🕒 {format_local(vote.created_at)}"
             )
