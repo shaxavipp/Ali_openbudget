@@ -19,6 +19,8 @@ class AdminMenuCB(CallbackData, prefix="adm"):
         "referral",
         "withdrawals",
         "settings",
+        "restart",
+        "restart_confirm",
     ]
 
 
