@@ -10,6 +10,7 @@ MIN_WITHDRAWAL = "min_withdrawal"
 REFERRAL_BONUS = "referral_bonus"
 REFERRAL_PROMO_TEXT = "referral_promo_text"
 DONAT_ACCOUNT = "donat_account"
+VOTE_COUNTER = "vote_counter"
 
 
 class GlobalSetting(Base):
