@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import re
 from decimal import Decimal
 
 from aiogram import Bot, F, Router
@@ -222,19 +221,6 @@ async def _finalize_and_handle_errors(
             pass
 
 
-def _build_hashtag(db_user: User) -> str:
-    """Turns the user's username or full name into a valid Telegram hashtag.
-
-    Hashtags can't contain spaces or most punctuation, so this strips
-    everything except letters/digits/underscore. Falls back to the
-    telegram_id if the name has no usable characters at all (e.g. it was
-    entirely emoji), so every post still gets a stable, clickable tag.
-    """
-    raw = db_user.username or db_user.full_name or ""
-    cleaned = re.sub(r"[^\w]", "", raw, flags=re.UNICODE)
-    return cleaned or str(db_user.telegram_id)
-
-
 async def _finalize_submission(
     session: AsyncSession, state: FSMContext, bot: Bot, db_user: User
 ) -> None:
@@ -306,9 +292,9 @@ async def _finalize_submission(
     verifiers_channel_id = getattr(settings, "verifiers_channel_id", None)
     if verifiers_channel_id:
         try:
-            overall_vote_number = await vote_repo.count_all(session)
+            vote_number = await settings_repo.get_and_increment_vote_counter(session)
             verifier_caption = (
-                f"{overall_vote_number}-ovoz #{_build_hashtag(db_user)}\n"
+                f"{vote_number}- #shaxa\n"
                 f"📞 {phone_number}\n"
                 f"🕒 {format_local(vote.created_at)}"
             )
