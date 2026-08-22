@@ -7,7 +7,7 @@ from bot.callbacks import AdminMenuCB
 from bot.filters import IsAdmin
 from bot.keyboards import admin_kb
 from bot.states.settings_states import GlobalSettingsStates
-from db.models.settings import DONAT_ACCOUNT, MIN_WITHDRAWAL, VOTE_PRICE
+from db.models.settings import DONAT_ACCOUNT, MIN_WITHDRAWAL, VOTE_COUNTER, VOTE_PRICE
 from repositories import settings_repo
 from utils.formatting import format_money
 
@@ -18,6 +18,7 @@ router.callback_query.filter(IsAdmin())
 EDIT_PRICE_CB = "gs_edit:vote_price"
 EDIT_MIN_WD_CB = "gs_edit:min_withdrawal"
 EDIT_DONAT_CB = "gs_edit:donat_account"
+EDIT_COUNTER_CB = "gs_edit:vote_counter"
 
 
 def _settings_kb():
@@ -36,6 +37,12 @@ def _settings_kb():
                     callback_data=EDIT_DONAT_CB,
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="🔢 Ovoz raqamini o'rnatish",
+                    callback_data=EDIT_COUNTER_CB,
+                )
+            ],
         ]
     )
 
@@ -45,11 +52,13 @@ async def _render(session: AsyncSession) -> str:
     price = values.get(VOTE_PRICE, "0")
     min_wd = values.get(MIN_WITHDRAWAL, "0")
     donat_account = values.get(DONAT_ACCOUNT, "Hali sozlanmagan")
+    counter = values.get(VOTE_COUNTER, "1")
     return (
         f"🎛 Global sozlamalar:\n\n"
         f"💰 Ovoz narxi: {format_money(price)}\n"
         f"🧾 Minimal pul yechish: {format_money(min_wd)}\n"
-        f"🎮 Donat hisobi: {donat_account}"
+        f"🎮 Donat hisobi: {donat_account}\n"
+        f"🔢 Keyingi ovoz raqami: {counter}"
     )
 
 
@@ -110,5 +119,24 @@ async def edit_donat_apply(message: Message, session: AsyncSession, state: FSMCo
         await message.answer("❗ Bo'sh bo'lishi mumkin emas. Qayta kiriting:", reply_markup=admin_kb.cancel_kb())
         return
     await settings_repo.set_value(session, DONAT_ACCOUNT, text)
+    await state.clear()
+    await message.answer(await _render(session), reply_markup=_settings_kb())
+
+
+@router.callback_query(F.data == EDIT_COUNTER_CB)
+async def edit_counter_prompt(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(GlobalSettingsStates.waiting_vote_counter)
+    await callback.message.edit_text(
+        "Keyingi ovoz qaysi raqamdan boshlansin? Butun son kiriting (masalan: 1):",
+        reply_markup=admin_kb.cancel_kb(),
+    )
+
+
+@router.message(GlobalSettingsStates.waiting_vote_counter, F.text)
+async def edit_counter_apply(message: Message, session: AsyncSession, state: FSMContext) -> None:
+    if not message.text.strip().isdigit() or int(message.text.strip()) <= 0:
+        await message.answer("❗ Musbat son kiriting:", reply_markup=admin_kb.cancel_kb())
+        return
+    await settings_repo.set_value(session, VOTE_COUNTER, message.text.strip())
     await state.clear()
     await message.answer(await _render(session), reply_markup=_settings_kb())
