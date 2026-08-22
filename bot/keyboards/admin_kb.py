@@ -28,6 +28,22 @@ def admin_root_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🔗 Referal sozlamalari", callback_data=_cb("referral")),
                 InlineKeyboardButton(text="🎛 Global sozlamalar", callback_data=_cb("settings")),
             ],
+            [
+                InlineKeyboardButton(text="🔄 Botni qayta ishga tushirish", callback_data=_cb("restart")),
+            ],
+        ]
+    )
+
+
+def restart_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Ha, qayta ishga tushirish", callback_data=_cb("restart_confirm")
+                )
+            ],
+            [back_button()],
         ]
     )
 
