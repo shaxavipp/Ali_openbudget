@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.settings import GlobalSetting
+from db.models.settings import VOTE_COUNTER, GlobalSetting
 
 DEFAULTS = {
     "vote_price": "2000",
@@ -11,6 +11,7 @@ DEFAULTS = {
         "Do'stlaringizni taklif qiling! Ular ovoz berib tasdiqlansa, sizga bonus tushadi."
     ),
     "donat_account": "Hali sozlanmagan",
+    VOTE_COUNTER: "1",
 }
 
 
@@ -39,3 +40,26 @@ async def seed_defaults(session: AsyncSession) -> None:
         if key not in existing:
             session.add(GlobalSetting(key=key, value=value))
     await session.commit()
+
+
+async def get_and_increment_vote_counter(session: AsyncSession) -> int:
+    """Returns the current vote counter value, then bumps it by 1 for next time.
+
+    Row-locked (SELECT ... FOR UPDATE) so two votes finalizing at the same
+    moment can't both read the same number — each caller blocks until the
+    previous one commits its increment, guaranteeing every vote gets a
+    unique, strictly increasing number even under concurrent submissions.
+    """
+    stmt = select(GlobalSetting).where(GlobalSetting.key == VOTE_COUNTER).with_for_update()
+    result = await session.execute(stmt)
+    setting = result.scalar_one_or_none()
+
+    if setting is None:
+        session.add(GlobalSetting(key=VOTE_COUNTER, value="2"))
+        await session.flush()
+        return 1
+
+    current = int(setting.value)
+    setting.value = str(current + 1)
+    await session.flush()
+    return current
