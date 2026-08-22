@@ -26,7 +26,7 @@ PAYMENT_SYSTEM_LABELS = {
     PaymentSystem.HUMO: "🇺🇿 Humo",
     PaymentSystem.UZCARD: "🔵 UzCard",
     PaymentSystem.CLICK: "💠 CLICK",
-    PaymentSystem.PAYME: "⬜ PayMe",
+    PaymentSystem.PAYME: "🎮 Donat",
     PaymentSystem.PAYNET: "📞 Paynet",
 }
 
