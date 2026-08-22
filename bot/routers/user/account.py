@@ -41,19 +41,16 @@ ACCOUNT_PHOTO_PATH = Path(__file__).parent / "openbudget_logo.jpg"
 #
 # "Hisobim" — reply-keyboard tugmasi, shuning uchun har bosilganda Telegram uni
 # yangi, mustaqil xabar sifatida yuboradi (bu bot emas, Telegram shunday
-# ishlaydi). Buning ustiga bir necha marta bosilganda ekranda bir xil karta
-# ko'payib ketmasligi uchun ikkita himoya qo'llanadi:
+# ishlaydi). Har bosishga foydalanuvchiga ANIQ KO'RINADIGAN javob kerak
+# (shunchaki jim turib qolmaslik kerak) — shu bilan birga ekranda bir xil
+# karta bir necha nusxada birga to'planib qolmasligi ham kerak.
 #
-#   1. Har bir foydalanuvchi uchun oxirgi yuborilgan kartaning manzili
-#      (chat_id, message_id) xotirada saqlanadi, va keyingi har qanday
-#      chaqiruvda YANGI xabar yuborish o'rniga O'SHA XABAR TAHRIRLANADI.
-#   2. Agar tahrirlashda Telegram "message is not modified" xatosini
-#      qaytarsa (matn/rasm/tugmalar OLDINGISI BILAN AYNAN BIR XIL bo'lganda —
-#      masalan balans o'zgarmagan holda qayta bosilganda) — bu haqiqiy xato
-#      emas, karta allaqachon to'g'ri holatda, shuning uchun hech narsa
-#      qilinmaydi. Buni oddiy xato deb hisoblab "yangi xabar yuborish"ga
-#      tushib qolish — aynan shu joyning o'zi eski nusxada bir xil kartaning
-#      bir necha marta takrorlanib chiqishiga sabab bo'lgan edi.
+# Shu ikkalasini birga ta'minlash uchun: har safar avvalgi karta (agar
+# mavjud bo'lsa) avval O'CHIRILADI, so'ng o'rniga YANGI karta yuboriladi.
+# Natijada: (a) har bosish uchun ko'zga ko'rinadigan yangi xabar bo'ladi —
+# hattoki balans o'zgarmagan bo'lsa ham, (b) bir vaqtning o'zida ekranda
+# faqat BITTA karta bo'ladi, chunki eskisi yangisi yuborilishidan oldin
+# yo'q qilinadi.
 #
 # Birinchi muvaffaqiyatli yuborishdan keyin Telegram bergan file_id shu yerda
 # keshlanadi — shundan keyin rasm diskdan qayta yuklanmaydi, file_id orqali
@@ -101,8 +98,9 @@ def _account_caption(db_user: User, referral_count: int) -> str:
 async def _show_or_refresh_account(
     bot, chat_id: int, session: AsyncSession, db_user: User
 ) -> None:
-    """Foydalanuvchining akkaunt kartasini ko'rsatadi: agar avval yuborilgan
-    kartasi hali mavjud bo'lsa uni tahrirlaydi, aks holda yangisini yuboradi."""
+    """Foydalanuvchining akkaunt kartasini ko'rsatadi: avvalgi kartani
+    o'chirib, o'rniga yangisini yuboradi — shunda har bosish ko'rinadigan
+    javob oladi, lekin ekranda hech qachon bir nechta nusxa birga turmaydi."""
     global _cached_photo_id
     async with _lock_for(db_user.telegram_id):
         referral_count = await _count_referrals(session, db_user.telegram_id)
@@ -113,18 +111,11 @@ async def _show_or_refresh_account(
         if existing is not None:
             existing_chat_id, existing_message_id = existing
             try:
-                await bot.edit_message_caption(
-                    chat_id=existing_chat_id,
-                    message_id=existing_message_id,
-                    caption=caption,
-                    reply_markup=kb,
-                )
-                return
-            except TelegramBadRequest as e:
-                if "message is not modified" in str(e).lower():
-                    return
-                # Boshqa sabab bilan tahrirlab bo'lmadi (masalan xabar o'chirilgan,
-                # yoki u rasmli xabar emas edi) — yangisini yuborishga o'tamiz.
+                await bot.delete_message(chat_id=existing_chat_id, message_id=existing_message_id)
+            except TelegramBadRequest:
+                # Eski xabar allaqachon o'chirilgan yoki o'chirib bo'lmaydi —
+                # baribir yangisini yuboramiz.
+                pass
 
         try:
             sent = await bot.send_photo(
