@@ -1,3 +1,5 @@
+import time
+
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
@@ -16,6 +18,22 @@ ACCOUNT_BACK_CB = "account:back"
 
 # "Shunday bot hohlaysizmi?" tugmasi bosilganda ochiladigan akkaunt.
 PROMO_BOT_URL = "https://t.me/shaxavip"
+
+# "Hisobim" reply-tugmasi bosilganda har safar YANGI matnli xabar sifatida keladi
+# (inline tugma emas), shuning uchun foydalanuvchi bir necha marta tez-tez bossa,
+# har biriga alohida javob yuborilar edi va bir xil kartochka bir necha marta
+# takrorlanib ko'rinardi. Buni oldini olish uchun har bir foydalanuvchi uchun
+# qisqa "sovish" (debounce) oynasi qo'llanadi — shu oyna ichidagi qayta bosishlar
+# e'tiborsiz qoldiriladi.
+_DEBOUNCE_SECONDS = 2.0
+_last_press: dict[int, float] = {}
+
+
+def _is_debounced(user_id: int) -> bool:
+    now = time.monotonic()
+    last = _last_press.get(user_id)
+    _last_press[user_id] = now
+    return last is not None and (now - last) < _DEBOUNCE_SECONDS
 
 
 def _account_kb() -> InlineKeyboardMarkup:
@@ -44,6 +62,8 @@ def _account_text(db_user: User) -> str:
 
 @router.message(F.text == ACCOUNT_BUTTON)
 async def show_account(message: Message, session: AsyncSession, db_user: User, state: FSMContext) -> None:
+    if _is_debounced(db_user.telegram_id):
+        return
     await state.clear()
     await message.answer(_account_text(db_user), reply_markup=_account_kb())
 
