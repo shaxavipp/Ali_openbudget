@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -18,6 +20,19 @@ router.callback_query.filter(IsAdmin())
 ADD_PROJECT_CB = "proj_add_start"
 TARGET_NUMBER_CB = "proj_new_target:number"
 TARGET_UNLIMITED_CB = "proj_new_target:unlimited"
+
+# Loyiha havolasi shu domen (yoki uning istalgan subdomeni: new.openbudget.uz,
+# www.openbudget.uz va h.k.) ostida bo'lishi kerak.
+BOARD_URL_DOMAIN = "openbudget.uz"
+BOARD_URL_HINT = "❗ Havola openbudget.uz saytiga tegishli bo'lishi kerak. Qayta kiriting:"
+
+
+def _is_valid_board_url(url: str) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        return False
+    host = parsed.hostname.lower()
+    return host == BOARD_URL_DOMAIN or host.endswith(f".{BOARD_URL_DOMAIN}")
 
 
 def _target_choice_kb() -> InlineKeyboardMarkup:
@@ -111,11 +126,8 @@ async def project_name_received(message: Message, state: FSMContext) -> None:
 @router.message(ProjectCreateStates.waiting_url, F.text)
 async def project_url_received(message: Message, state: FSMContext) -> None:
     url = message.text.strip()
-    if not url.startswith("https://openbudget.uz/"):
-        await message.answer(
-            "❗ Havola https://openbudget.uz/ bilan boshlanishi kerak. Qayta kiriting:",
-            reply_markup=admin_kb.cancel_kb(),
-        )
+    if not _is_valid_board_url(url):
+        await message.answer(BOARD_URL_HINT, reply_markup=admin_kb.cancel_kb())
         return
 
     await state.update_data(board_url=url)
@@ -216,18 +228,15 @@ async def project_set_url_prompt(
     await state.set_state(ProjectEditStates.waiting_new_url)
     await state.update_data(project_id=callback_data.project_id)
     await callback.message.edit_text(
-        "Yangi havolani kiriting (https://openbudget.uz/...):", reply_markup=admin_kb.cancel_kb()
+        "Yangi havolani kiriting (openbudget.uz):", reply_markup=admin_kb.cancel_kb()
     )
 
 
 @router.message(ProjectEditStates.waiting_new_url, F.text)
 async def project_set_url_apply(message: Message, session: AsyncSession, state: FSMContext) -> None:
     url = message.text.strip()
-    if not url.startswith("https://openbudget.uz/"):
-        await message.answer(
-            "❗ Havola https://openbudget.uz/ bilan boshlanishi kerak. Qayta kiriting:",
-            reply_markup=admin_kb.cancel_kb(),
-        )
+    if not _is_valid_board_url(url):
+        await message.answer(BOARD_URL_HINT, reply_markup=admin_kb.cancel_kb())
         return
     data = await state.get_data()
     project = await project_repo.get_by_id(session, data["project_id"])
