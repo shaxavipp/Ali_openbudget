@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     admin_id: int
     channel_id: int
     payments_channel_id: int
+    verifiers_channel_id: int
     database_url: str
     timezone: str = "Asia/Tashkent"
 
