@@ -8,6 +8,7 @@ from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
     Message,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -284,6 +285,33 @@ async def _finalize_submission(
         reply_markup=vote_decision_kb(vote.id),
     )
     await vote_repo.set_admin_message(session, vote, sent.message_id, sent.chat.id)
+
+    # Tekshiruvchilar kanali: faqat skrinshot(lar) + telefon raqami va sana, tugmasiz.
+    # settings'da verifiers_channel_id bo'lmasa yoki bo'sh bo'lsa, jimgina o'tkazib
+    # yuboriladi — bu blok admin kanaliga yuborishga hech qanday ta'sir qilmaydi.
+    verifiers_channel_id = getattr(settings, "verifiers_channel_id", None)
+    if verifiers_channel_id:
+        try:
+            verifier_caption = (
+                f"📞 {phone_number}\n"
+                f"🕒 {format_local(vote.created_at)}"
+            )
+            if len(screenshot_ids) == 1:
+                await bot.send_photo(
+                    chat_id=verifiers_channel_id,
+                    photo=screenshot_ids[0],
+                    caption=verifier_caption,
+                )
+            else:
+                media = [InputMediaPhoto(media=fid) for fid in screenshot_ids]
+                media[0].caption = verifier_caption
+                await bot.send_media_group(chat_id=verifiers_channel_id, media=media)
+        except Exception:
+            # tekshiruvchilar kanaliga yuborish muvaffaqiyatsiz bo'lsa ham, asosiy
+            # oqim (admin tasdiqlash) buzilmasligi kerak — shuning uchun faqat log
+            logger.exception(
+                "Tekshiruvchilar kanaliga yuborishda xatolik (vote_id=%s)", vote.id
+            )
 
     await state.clear()
     await bot.send_message(
