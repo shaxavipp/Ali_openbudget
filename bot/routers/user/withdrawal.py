@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.callbacks import WithdrawalActionCB
 from bot.keyboards import user_kb
 from bot.keyboards.user_kb import main_menu
-from bot.routers.user.account import WITHDRAW_START_CB
+from bot.routers.user.account import ACCOUNT_BACK_CB, WITHDRAW_START_CB
 from bot.states.withdrawal_states import WithdrawalStates
 from config import settings
 from db.models.settings import MIN_WITHDRAWAL
@@ -49,6 +49,7 @@ def _payment_system_kb() -> InlineKeyboardMarkup:
             row = []
     if row:
         rows.append(row)
+    rows.append([InlineKeyboardButton(text="« Orqaga", callback_data=ACCOUNT_BACK_CB)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -90,12 +91,12 @@ async def payment_system_chosen(callback: CallbackQuery, state: FSMContext) -> N
     await state.update_data(payment_system=system_value)
     await state.set_state(WithdrawalStates.waiting_card_number)
     await callback.message.answer(
-        "Karta raqamingizni kiriting (16 ta raqam):", reply_markup=_cancel_only_kb()
+        "💳 Karta raqamingizni kiriting:", reply_markup=_cancel_only_kb()
     )
 
 
 @router.message(WithdrawalStates.waiting_card_number, F.text, ~F.text.in_(user_kb.MENU_BUTTON_TEXTS))
-async def card_number_received(message: Message, state: FSMContext) -> None:
+async def card_number_received(message: Message, session: AsyncSession, state: FSMContext) -> None:
     digits = "".join(ch for ch in message.text if ch.isdigit())
     if len(digits) != 16:
         await message.answer(
@@ -105,8 +106,13 @@ async def card_number_received(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(card_number=digits)
     await state.set_state(WithdrawalStates.waiting_amount)
+
+    min_wd_raw = await settings_repo.get(session, MIN_WITHDRAWAL)
+    min_wd = Decimal(min_wd_raw) if min_wd_raw else Decimal("0")
     await message.answer(
-        "Qancha pul yechib olmoqchisiz? (so'mda kiriting)", reply_markup=_cancel_only_kb()
+        "❓ Qancha pulingizni yechib olasiz?\n\n"
+        f"📱 Minimal: {format_money(min_wd)}",
+        reply_markup=_cancel_only_kb(),
     )
 
 
@@ -175,11 +181,12 @@ async def withdraw_confirm(
         return
 
     await state.clear()
+    system_name = withdrawal.payment_system.value.upper()
     await callback.message.answer(
-        "✅ Pul yechish so'rovingiz yuborildi!\n"
-        f"To'lov tizimi: {PAYMENT_SYSTEM_LABELS[withdrawal.payment_system]}\n"
-        f"Karta: {mask_card(withdrawal.card_number)}\n"
-        f"Miqdor: {format_money(withdrawal.amount)}\n\n"
+        "✅ Pul yechish so'rovingiz yuborildi\n"
+        f"📄 To'lov tizimi: {system_name}\n"
+        f"💳 Karta: {withdrawal.card_number}\n"
+        f"✍️ Miqdor: {format_money(withdrawal.amount)}\n\n"
         "Admin tomonidan ko'rib chiqilgach, pul o'tkaziladi.",
         reply_markup=main_menu(),
     )
