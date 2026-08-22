@@ -303,8 +303,13 @@ async def _finalize_submission(
                     caption=verifier_caption,
                 )
             else:
-                media = [InputMediaPhoto(media=fid) for fid in screenshot_ids]
-                media[0].caption = verifier_caption
+                media = [
+                    InputMediaPhoto(
+                        media=fid,
+                        caption=verifier_caption if index == 0 else None,
+                    )
+                    for index, fid in enumerate(screenshot_ids)
+                ]
                 await bot.send_media_group(chat_id=verifiers_channel_id, media=media)
         except Exception:
             # tekshiruvchilar kanaliga yuborish muvaffaqiyatsiz bo'lsa ham, asosiy
