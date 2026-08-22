@@ -10,6 +10,7 @@ DEFAULTS = {
     "referral_promo_text": (
         "Do'stlaringizni taklif qiling! Ular ovoz berib tasdiqlansa, sizga bonus tushadi."
     ),
+    "donat_account": "Hali sozlanmagan",
 }
 
 
