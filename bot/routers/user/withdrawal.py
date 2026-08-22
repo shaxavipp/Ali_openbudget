@@ -11,7 +11,7 @@ from bot.keyboards.user_kb import main_menu
 from bot.routers.user.account import ACCOUNT_BACK_CB, WITHDRAW_START_CB
 from bot.states.withdrawal_states import WithdrawalStates
 from config import settings
-from db.models.settings import MIN_WITHDRAWAL
+from db.models.settings import DONAT_ACCOUNT, MIN_WITHDRAWAL
 from db.models.user import User
 from db.models.withdrawal import PaymentSystem, Withdrawal
 from repositories import settings_repo, withdrawal_repo
@@ -86,13 +86,32 @@ async def withdraw_start(callback: CallbackQuery, session: AsyncSession, db_user
 
 
 @router.callback_query(F.data.startswith("wd_sys:"))
-async def payment_system_chosen(callback: CallbackQuery, state: FSMContext) -> None:
+async def payment_system_chosen(
+    callback: CallbackQuery, session: AsyncSession, state: FSMContext
+) -> None:
     system_value = callback.data.split(":", 1)[1]
+
+    if system_value == PaymentSystem.PAYME.value:
+        await _show_donat_account(callback, session)
+        return
+
     await state.update_data(payment_system=system_value)
     await state.set_state(WithdrawalStates.waiting_card_number)
     await callback.message.answer(
         "💳 Karta raqamingizni kiriting:", reply_markup=_cancel_only_kb()
     )
+
+
+async def _show_donat_account(callback: CallbackQuery, session: AsyncSession) -> None:
+    account = await settings_repo.get(session, DONAT_ACCOUNT)
+    text = account or "Admin hisobi hali sozlanmagan. Keyinroq urinib ko'ring."
+    await callback.message.answer(
+        f"🎮 Donat uchun hisob:\n\n{text}",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="« Orqaga", callback_data=ACCOUNT_BACK_CB)]]
+        ),
+    )
+    await callback.answer()
 
 
 @router.message(WithdrawalStates.waiting_card_number, F.text, ~F.text.in_(user_kb.MENU_BUTTON_TEXTS))
