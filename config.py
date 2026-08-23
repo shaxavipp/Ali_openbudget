@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     verifiers_channel_id: int
     database_url: str
     timezone: str = "Asia/Tashkent"
+    verifier_tag: str = "shaxa"
 
 
 settings = Settings()
