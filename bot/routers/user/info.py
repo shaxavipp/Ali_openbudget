@@ -15,7 +15,7 @@ router = Router(name="user_info")
 
 # Kanal — "bizning bot orqali to'langan barcha to'lovlar isbot kanali"
 PAYMENTS_CHANNEL_URL = "h"
-ADMIN_USERNAME = "@shaxavip"
+ADMIN_USERNAME = "@nvr_ali"
 
 RATING_REFRESH_CB = "info:rating_refresh"
 
