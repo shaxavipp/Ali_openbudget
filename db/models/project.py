@@ -20,6 +20,7 @@ class Project(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     board_url: Mapped[str]
+    bot_url: Mapped[str | None] = mapped_column(default=None)  # Telegram bot havolasi (t.me/...)
     queue_order: Mapped[int]
     target_votes: Mapped[int | None] = mapped_column(default=None)  # NULL = cheksiz
     is_active: Mapped[bool] = mapped_column(default=False)
