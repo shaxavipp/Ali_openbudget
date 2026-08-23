@@ -14,8 +14,8 @@ from repositories import vote_repo
 router = Router(name="user_info")
 
 # Kanal — "bizning bot orqali to'langan barcha to'lovlar isbot kanali"
-PAYMENTS_CHANNEL_URL = "https://t.me/+ovEOiG13g-0zYzRi"
-ADMIN_USERNAME = "@shaxavip"
+"
+ADMIN_USERNAME = "@NvR_ALI"
 
 RATING_REFRESH_CB = "info:rating_refresh"
 
