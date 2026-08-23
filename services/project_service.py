@@ -62,6 +62,11 @@ async def set_board_url(session: AsyncSession, project: Project, new_url: str) -
     await session.flush()
 
 
+async def set_bot_url(session: AsyncSession, project: Project, new_url: str | None) -> None:
+    project.bot_url = new_url
+    await session.flush()
+
+
 async def set_target_votes(session: AsyncSession, project: Project, target_votes: int | None) -> None:
     project.target_votes = target_votes
     await session.flush()
